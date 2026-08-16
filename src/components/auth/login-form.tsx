@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+
+const STAFF_ROLES = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "MANAGER",
+  "PRODUCT_MANAGER",
+  "ORDER_MANAGER",
+  "CONTENT_EDITOR",
+  "CUSTOMER_SUPPORT",
+  "ANALYST",
+];
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/account";
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,13 +36,22 @@ export function LoginForm() {
       redirect: false,
     });
 
-    setLoading(false);
-
     if (result?.error) {
+      setLoading(false);
       setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
       return;
     }
-    router.push(callbackUrl);
+
+    // توجيه حسب الدور: الموظفون إلى لوحة التحكم، والعملاء إلى حسابهم
+    let destination = callbackUrl;
+    if (!destination) {
+      const session = await getSession();
+      const role = session?.user?.role;
+      destination = role && STAFF_ROLES.includes(role) ? "/admin" : "/account";
+    }
+
+    setLoading(false);
+    router.push(destination);
     router.refresh();
   }
 
