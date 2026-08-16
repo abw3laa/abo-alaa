@@ -12,6 +12,18 @@ const arabicFont = IBM_Plex_Sans_Arabic({
   display: "swap",
 });
 
+// حساب رابط الموقع بأمان: متغير البيئة، أو رابط Vercel التلقائي، أو محلي
+// نتعامل مع القيم الفارغة (وليس null فقط) لتفادي خطأ Invalid URL أثناء البناء
+function resolveSiteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+}
+
+const siteUrl = resolveSiteUrl();
+
 export const metadata: Metadata = {
   title: {
     default: "أبو علاء | متجر الأزياء والمنتجات المتنوعة",
@@ -20,9 +32,7 @@ export const metadata: Metadata = {
   description:
     "متجر أبو علاء الإلكتروني لبيع الملابس والأحذية والإكسسوارات والإلكترونيات ومنتجات المنزل بأفضل الأسعار مع شحن سريع ودفع آمن.",
   keywords: ["متجر", "ملابس", "أزياء", "تسوق", "أبو علاء"],
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: new URL(siteUrl),
   openGraph: {
     type: "website",
     locale: "ar_AR",
