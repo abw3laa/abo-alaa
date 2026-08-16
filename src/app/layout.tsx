@@ -76,7 +76,6 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
   const dir = locale === "ar" ? "rtl" : "ltr";
-
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",

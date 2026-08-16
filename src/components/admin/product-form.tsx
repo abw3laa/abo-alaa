@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { MediaUploader, type UploadedMedia } from "@/components/admin/media-uploader";
 import type { ActionResult } from "@/app/admin/products/actions";
 
 interface Option {
@@ -31,6 +32,8 @@ interface ProductFormProps {
     brandId?: string | null;
     status?: string;
     isFeatured?: boolean;
+    shippingScope?: string;
+    media?: UploadedMedia[];
   };
   submitLabel: string;
 }
@@ -175,6 +178,21 @@ export function ProductForm({
             <option value="ARCHIVED">مؤرشف</option>
           </select>
         </div>
+        <div className="space-y-1.5">
+          <label htmlFor="shippingScope" className="text-sm font-medium">
+            نطاق الشحن
+          </label>
+          <select
+            id="shippingScope"
+            name="shippingScope"
+            defaultValue={defaultValues?.shippingScope ?? "both"}
+            className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="both">الكل (داخلي ودولي)</option>
+            <option value="domestic">داخل تركيا فقط</option>
+            <option value="international">دولي فقط</option>
+          </select>
+        </div>
         <label className="flex items-center gap-2 self-end pb-2">
           <input
             type="checkbox"
@@ -184,6 +202,17 @@ export function ProductForm({
           />
           <span className="text-sm">منتج مميّز</span>
         </label>
+      </div>
+
+      {/* الصور والفيديو */}
+      <div className="rounded-lg border bg-card p-5">
+        <MediaUploader
+          name="media"
+          label="صور وفيديو المنتج"
+          allowVideo
+          maxFiles={8}
+          defaultValue={defaultValues?.media ?? []}
+        />
       </div>
 
       <div className="flex gap-3">

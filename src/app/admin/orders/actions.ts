@@ -78,7 +78,8 @@ export async function updateOrderStatus(
 export async function addTrackingNumber(
   orderId: string,
   carrier: string,
-  trackingNumber: string
+  trackingNumber: string,
+  trackingUrl?: string
 ): Promise<ActionResult> {
   try {
     const user = await requirePermission(PERMISSIONS.ORDERS_UPDATE);
@@ -87,6 +88,7 @@ export async function addTrackingNumber(
         orderId,
         carrier,
         trackingNumber,
+        trackingUrl: trackingUrl || null,
         status: "shipped",
         shippedAt: new Date(),
       },

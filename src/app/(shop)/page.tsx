@@ -1,15 +1,17 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/product/product-card";
+import { HeroCarousel } from "@/components/home/hero-carousel";
 import { TrustBar } from "@/components/home/trust-bar";
 import { Newsletter } from "@/components/home/newsletter";
 
 export const revalidate = 3600; // ISR كل ساعة
 
 async function getHomeData() {
-  const [featured, newest, banner, categories] = await Promise.all([
+  const [featured, newest, banners, categories] = await Promise.all([
     prisma.product.findMany({
       where: { status: "PUBLISHED", isFeatured: true, deletedAt: null },
       include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
@@ -21,8 +23,9 @@ async function getHomeData() {
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
-    prisma.banner.findFirst({
+    prisma.banner.findMany({
       where: { position: "home_hero", isActive: true },
+      orderBy: { sortOrder: "asc" },
     }),
     prisma.category.findMany({
       where: { parentId: null, isActive: true },
@@ -30,45 +33,34 @@ async function getHomeData() {
       take: 6,
     }),
   ]);
-  return { featured, newest, banner, categories };
+  return { featured, newest, banners, categories };
 }
 
 export default async function HomePage() {
   const t = await getTranslations("home");
-  const { featured, newest, banner, categories } = await getHomeData();
+  const { featured, newest, banners, categories } = await getHomeData();
+
+  const slides = banners.map((b) => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle,
+    image: b.image,
+    mobileImage: b.mobileImage,
+    link: b.link,
+    buttonText: b.buttonText,
+  }));
 
   return (
     <div className="flex flex-col gap-12 pb-16">
-      {/* البانر الرئيسي */}
-      <section
-        className="relative overflow-hidden bg-primary text-primary-foreground"
-        aria-label={t("heroTitle")}
-      >
-        <div className="container flex min-h-[420px] flex-col items-start justify-center gap-6 py-16">
-          <span className="rounded-full bg-gold px-4 py-1 text-sm font-medium text-gold-foreground">
-            {banner?.subtitle ?? t("limitedOffers")}
-          </span>
-          <h1 className="max-w-2xl text-4xl font-bold leading-tight md:text-6xl">
-            {banner?.title ?? t("heroTitle")}
-          </h1>
-          <p className="max-w-xl text-lg text-primary-foreground/80">
-            {t("heroSubtitle")}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild variant="gold" size="lg">
-              <Link href="/products">{t("shopNow")}</Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-            >
-              <Link href="/deals">{t("viewDeals")}</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* البانر الرئيسي المتحرك */}
+      <HeroCarousel
+        slides={slides}
+        fallbackTitle={t("heroTitle")}
+        fallbackSubtitle={t("heroSubtitle")}
+        fallbackBadge={t("limitedOffers")}
+        shopNowLabel={t("shopNow")}
+        viewDealsLabel={t("viewDeals")}
+      />
 
       {/* التصنيفات */}
       <section className="container">
@@ -80,8 +72,18 @@ export default async function HomePage() {
               href={`/categories/${cat.slug}`}
               className="group flex flex-col items-center gap-3 rounded-lg border p-4 text-center transition-colors hover:border-gold hover:bg-accent/10"
             >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-2xl font-bold text-primary">
-                {cat.name.charAt(0)}
+              <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-secondary text-2xl font-bold text-primary">
+                {cat.image || cat.icon ? (
+                  <Image
+                    src={(cat.image ?? cat.icon)!}
+                    alt={cat.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                ) : (
+                  cat.name.charAt(0)
+                )}
               </div>
               <span className="text-sm font-medium">{cat.name}</span>
             </Link>

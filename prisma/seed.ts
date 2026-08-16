@@ -419,17 +419,71 @@ async function main() {
 
   // ---------- البانرات ----------
   console.log("→ إنشاء البانرات");
-  await prisma.banner.create({
-    data: {
+  const banners = [
+    {
       title: "تشكيلة الشتاء الجديدة",
       subtitle: "خصومات تصل إلى 50%",
       image: "https://picsum.photos/seed/banner1/1600/600",
       buttonText: "تسوق الآن",
       link: "/products",
-      position: "home_hero",
-      isActive: true,
+      sortOrder: 0,
     },
-  });
+    {
+      title: "أحدث الإكسسوارات",
+      subtitle: "وصل حديثاً",
+      image: "https://picsum.photos/seed/banner2/1600/600",
+      buttonText: "اكتشف المجموعة",
+      link: "/products?sort=newest",
+      sortOrder: 1,
+    },
+    {
+      title: "عروض حصرية",
+      subtitle: "لفترة محدودة",
+      image: "https://picsum.photos/seed/banner3/1600/600",
+      buttonText: "شاهد العروض",
+      link: "/deals",
+      sortOrder: 2,
+    },
+  ];
+  for (const b of banners) {
+    await prisma.banner.create({
+      data: { ...b, position: "home_hero", isActive: true },
+    });
+  }
+
+  // ---------- طرق الدفع ----------
+  console.log("→ إنشاء طرق الدفع");
+  const paymentMethods = [
+    {
+      code: "cod",
+      name: "الدفع عند الاستلام",
+      description: "ادفع نقداً عند استلام طلبك",
+      provider: "manual",
+      sortOrder: 0,
+    },
+    {
+      code: "bank_transfer",
+      name: "تحويل بنكي",
+      description: "حوّل المبلغ إلى حسابنا البنكي",
+      instructions: "IBAN: TR00 0000 0000 0000 0000 0000 00 — باسم متجر أبو علاء",
+      provider: "manual",
+      sortOrder: 1,
+    },
+    {
+      code: "card",
+      name: "بطاقة ائتمان",
+      description: "دفع آمن عبر البطاقة البنكية",
+      provider: "stripe",
+      sortOrder: 2,
+    },
+  ];
+  for (const pm of paymentMethods) {
+    await prisma.paymentMethodOption.upsert({
+      where: { code: pm.code },
+      update: {},
+      create: { ...pm, isActive: true },
+    });
+  }
 
   // ---------- الإعدادات الأساسية ----------
   console.log("→ إنشاء الإعدادات");

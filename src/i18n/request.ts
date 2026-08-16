@@ -8,7 +8,7 @@ export default getRequestConfig(async () => {
   const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
 
   const locale =
-    cookieLocale && routing.locales.includes(cookieLocale as "ar" | "en")
+    cookieLocale && routing.locales.includes(cookieLocale as "ar" | "en" | "tr")
       ? cookieLocale
       : routing.defaultLocale;
 

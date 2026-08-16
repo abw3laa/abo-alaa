@@ -16,7 +16,13 @@ export default async function EditProductPage({
   const { id } = await params;
 
   const [product, categories, brands] = await Promise.all([
-    prisma.product.findUnique({ where: { id } }),
+    prisma.product.findUnique({
+      where: { id },
+      include: {
+        images: { orderBy: { sortOrder: "asc" } },
+        videos: { orderBy: { sortOrder: "asc" } },
+      },
+    }),
     prisma.category.findMany({
       where: { isActive: true },
       select: { id: true, name: true },
@@ -29,6 +35,11 @@ export default async function EditProductPage({
   ]);
 
   if (!product) notFound();
+
+  const media = [
+    ...product.images.map((i) => ({ url: i.url, type: "image" as const })),
+    ...product.videos.map((v) => ({ url: v.url, type: "video" as const })),
+  ];
 
   // ربط الـ id بالإجراء
   const boundAction = async (prev: ActionResult | null, formData: FormData) => {
@@ -57,6 +68,8 @@ export default async function EditProductPage({
           brandId: product.brandId,
           status: product.status,
           isFeatured: product.isFeatured,
+          shippingScope: product.shippingScope,
+          media,
         }}
         submitLabel="حفظ التغييرات"
       />

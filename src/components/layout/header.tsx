@@ -15,11 +15,6 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      {/* شريط الإعلانات */}
-      <div className="bg-primary py-2 text-center text-xs text-primary-foreground">
-        شحن مجاني للطلبات فوق 500 ل.ت · دفع آمن · استرجاع خلال 14 يوماً
-      </div>
-
       <div className="container flex h-16 items-center gap-4">
         {/* زر القائمة للجوال */}
         <button

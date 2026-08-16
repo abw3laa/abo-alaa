@@ -23,7 +23,24 @@ const productSchema = z.object({
   categoryId: z.string().optional(),
   status: z.enum(["PUBLISHED", "DRAFT", "ARCHIVED"]),
   isFeatured: z.coerce.boolean().optional(),
+  shippingScope: z.enum(["both", "domestic", "international"]).optional(),
+  media: z.string().optional(),
 });
+
+type MediaItem = { url: string; type: "image" | "video" };
+
+function parseMedia(raw?: string): MediaItem[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (m) => m && typeof m.url === "string" && (m.type === "image" || m.type === "video")
+    );
+  } catch {
+    return [];
+  }
+}
 
 function parseForm(formData: FormData) {
   return productSchema.safeParse({
@@ -39,6 +56,8 @@ function parseForm(formData: FormData) {
     categoryId: formData.get("categoryId") || undefined,
     status: formData.get("status") || "DRAFT",
     isFeatured: formData.get("isFeatured") === "on",
+    shippingScope: formData.get("shippingScope") || "both",
+    media: formData.get("media") || undefined,
   });
 }
 
@@ -56,6 +75,9 @@ export async function createProduct(
       };
     }
     const d = parsed.data;
+    const media = parseMedia(d.media);
+    const images = media.filter((m) => m.type === "image");
+    const videos = media.filter((m) => m.type === "video");
 
     const product = await prisma.product.create({
       data: {
@@ -71,9 +93,23 @@ export async function createProduct(
         brandId: d.brandId || null,
         status: d.status,
         isFeatured: d.isFeatured ?? false,
+        shippingScope: d.shippingScope ?? "both",
         currency: "TRY",
         categories: d.categoryId
           ? { create: { categoryId: d.categoryId } }
+          : undefined,
+        images: images.length
+          ? {
+              create: images.map((img, i) => ({
+                url: img.url,
+                sortOrder: i,
+              })),
+            }
+          : undefined,
+        videos: videos.length
+          ? {
+              create: videos.map((v, i) => ({ url: v.url, sortOrder: i })),
+            }
           : undefined,
       },
     });
@@ -109,6 +145,9 @@ export async function updateProduct(
       };
     }
     const d = parsed.data;
+    const media = parseMedia(d.media);
+    const images = media.filter((m) => m.type === "image");
+    const videos = media.filter((m) => m.type === "video");
 
     await prisma.product.update({
       where: { id },
@@ -124,8 +163,33 @@ export async function updateProduct(
         brandId: d.brandId || null,
         status: d.status,
         isFeatured: d.isFeatured ?? false,
+        shippingScope: d.shippingScope ?? "both",
       },
     });
+
+    // مزامنة الوسائط: نستبدل الصور/الفيديو بالقائمة الجديدة
+    if (d.media !== undefined) {
+      await prisma.productImage.deleteMany({ where: { productId: id } });
+      await prisma.productVideo.deleteMany({ where: { productId: id } });
+      if (images.length) {
+        await prisma.productImage.createMany({
+          data: images.map((img, i) => ({
+            productId: id,
+            url: img.url,
+            sortOrder: i,
+          })),
+        });
+      }
+      if (videos.length) {
+        await prisma.productVideo.createMany({
+          data: videos.map((v, i) => ({
+            productId: id,
+            url: v.url,
+            sortOrder: i,
+          })),
+        });
+      }
+    }
 
     await logAudit({
       userId: user.id,

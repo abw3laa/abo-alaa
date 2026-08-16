@@ -215,6 +215,8 @@ model Product {
   status         PublishStatus @default(DRAFT)
   publishAt      DateTime?
   isFeatured     Boolean  @default(false)
+  // نطاق الشحن: domestic = داخل تركيا فقط | international = دولي | both = الكل
+  shippingScope  String   @default("both")
 
   ratingAverage  Float    @default(0)
   ratingCount    Int      @default(0)
@@ -596,6 +598,21 @@ model WebhookEvent {
   createdAt  DateTime @default(now())
 }
 
+// طرق الدفع المتاحة في المتجر (يُديرها الأدمن)
+// مثال: الدفع عند الاستلام، تحويل بنكي، بطاقة، دفع لاحق
+model PaymentMethodOption {
+  id          String   @id @default(uuid())
+  code        String   @unique // cod | bank_transfer | card | installments
+  name        String
+  description String?  @db.Text
+  instructions String? @db.Text // تعليمات مثل رقم الحساب البنكي
+  provider    String   @default("manual") // manual | stripe | paypal
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // ---------- الشحن ----------
 
 model ShippingCarrier {
@@ -627,6 +644,7 @@ model Shipment {
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   carrier      String?
   trackingNumber String?
+  trackingUrl  String?
   status       String   @default("pending")
   shippedAt    DateTime?
   deliveredAt  DateTime?

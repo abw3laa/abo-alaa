@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/format";
 import { OrderStatusControl } from "@/components/admin/order-status-control";
+import { TrackingControl } from "@/components/admin/tracking-control";
 
 export const dynamic = "force-dynamic";
 
@@ -103,9 +104,21 @@ export default async function AdminOrderDetailPage({
             <div className="rounded-lg border bg-card p-5">
               <h3 className="mb-3 font-semibold">الشحن</h3>
               {order.shipments.map((s) => (
-                <p key={s.id} className="text-sm">
-                  {s.carrier} — {s.trackingNumber}
-                </p>
+                <div key={s.id} className="text-sm">
+                  <p>
+                    {s.carrier} — {s.trackingNumber}
+                  </p>
+                  {s.trackingUrl && (
+                    <a
+                      href={s.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gold hover:underline"
+                    >
+                      تتبّع الشحنة
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -119,6 +132,12 @@ export default async function AdminOrderDetailPage({
               orderId={order.id}
               currentStatus={order.status}
             />
+          </div>
+
+          {/* إضافة معلومات الشحن والتتبع */}
+          <div className="rounded-lg border bg-card p-5">
+            <h3 className="mb-3 font-semibold">إضافة شحنة / رقم تتبع</h3>
+            <TrackingControl orderId={order.id} />
           </div>
 
           {/* بيانات العميل */}

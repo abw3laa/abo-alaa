@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/format";
 import { CustomerBanControl } from "@/components/admin/customer-ban-control";
+import { CustomerControls } from "@/components/admin/customer-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -48,9 +49,20 @@ export default async function AdminCustomerDetailPage({
               />
               <Row label="عدد الطلبات" value={String(customer._count.orders)} />
               <Row label="نقاط الولاء" value={String(customer.loyaltyPoints)} />
+              <Row label="الفئة" value={customer.tier} />
               <Row label="انضم" value={formatDate(customer.createdAt, "ar")} />
             </dl>
           </div>
+
+          {canManage && (
+            <div className="rounded-lg border bg-card p-5">
+              <h3 className="mb-3 font-semibold">ترقية العميل والنقاط</h3>
+              <CustomerControls
+                userId={customer.id}
+                currentTier={customer.tier}
+              />
+            </div>
+          )}
 
           {canManage && (
             <div className="rounded-lg border bg-card p-5">

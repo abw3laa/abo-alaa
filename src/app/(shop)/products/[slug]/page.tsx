@@ -5,13 +5,29 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, calcDiscountPercent } from "@/lib/format";
 import { RatingStars } from "@/components/product/rating-stars";
+import { ReviewForm } from "@/components/product/review-form";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductPurchase } from "@/components/product/product-purchase";
+import { auth } from "@/lib/auth";
 import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
-async function getProduct(slug: string) {
+function decodeSlug(raw: string) {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+async function getProduct(rawSlug: string) {
+  const slug = decodeSlug(rawSlug);
   return prisma.product.findFirst({
-    where: { slug, status: "PUBLISHED", deletedAt: null },
+    // نبحث بالـ slug أو بالـ id (احتياطي) مع قبول المنشور فقط
+    where: {
+      OR: [{ slug }, { id: slug }],
+      status: "PUBLISHED",
+      deletedAt: null,
+    },
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       videos: true,
@@ -35,7 +51,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await prisma.product.findFirst({
-    where: { slug, status: "PUBLISHED" },
+    where: { slug: decodeSlug(slug), status: "PUBLISHED" },
     select: {
       name: true,
       seoTitle: true,
@@ -59,6 +75,8 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) notFound();
+
+  const session = await auth();
 
   // زيادة عداد المشاهدات (دون انتظار)
   prisma.product
@@ -287,33 +305,45 @@ export default async function ProductDetailPage({
       </div>
 
       {/* المراجعات */}
-      {product.reviews.length > 0 && (
-        <section className="mt-12">
-          <h2 className="mb-4 text-xl font-bold">
-            المراجعات ({product.ratingCount})
-          </h2>
+      <section className="mt-12">
+        <h2 className="mb-4 text-xl font-bold">
+          المراجعات {product.ratingCount > 0 ? `(${product.ratingCount})` : ""}
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-4">
-            {product.reviews.map((review) => (
-              <div key={review.id} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">
-                    {review.user.name ?? "عميل"}
-                  </span>
-                  <RatingStars rating={review.rating} />
+            {product.reviews.length > 0 ? (
+              product.reviews.map((review) => (
+                <div key={review.id} className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      {review.user.name ?? "عميل"}
+                      {review.isVerifiedPurchase && (
+                        <span className="ms-2 rounded bg-success/10 px-1.5 py-0.5 text-xs text-success">
+                          شراء موثّق
+                        </span>
+                      )}
+                    </span>
+                    <RatingStars rating={review.rating} />
+                  </div>
+                  {review.title && (
+                    <p className="mt-2 font-medium">{review.title}</p>
+                  )}
+                  {review.comment && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {review.comment}
+                    </p>
+                  )}
                 </div>
-                {review.title && (
-                  <p className="mt-2 font-medium">{review.title}</p>
-                )}
-                {review.comment && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {review.comment}
-                  </p>
-                )}
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                لا توجد مراجعات بعد. كن أول من يكتب مراجعة!
+              </p>
+            )}
           </div>
-        </section>
-      )}
+          <ReviewForm productId={product.id} isLoggedIn={!!session?.user} />
+        </div>
+      </section>
 
       {/* منتجات مشابهة */}
       {related.length > 0 && (

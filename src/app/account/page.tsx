@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
+import { ProfileForm } from "@/components/account/profile-form";
 import { Package, Heart, Award, ShoppingBag } from "lucide-react";
 
 export const metadata: Metadata = { title: "حسابي" };
+
+export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const session = await auth();
@@ -15,7 +18,16 @@ export default async function AccountPage() {
     prisma.wishlistItem.count({ where: { userId } }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { loyaltyPoints: true, totalSpent: true, createdAt: true },
+      select: {
+        name: true,
+        email: true,
+        phone: true,
+        locale: true,
+        tier: true,
+        loyaltyPoints: true,
+        totalSpent: true,
+        createdAt: true,
+      },
     }),
   ]);
 
@@ -34,12 +46,19 @@ export default async function AccountPage() {
     },
   ];
 
+  const TIER_LABELS: Record<string, string> = {
+    NEW: "عميل جديد",
+    REGULAR: "عميل منتظم",
+    VIP: "عميل مميّز VIP",
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">مرحباً، {session!.user.name}</h1>
+        <h1 className="text-2xl font-bold">مرحباً، {user?.name ?? "عميل"}</h1>
         <p className="text-muted-foreground">
-          إليك ملخّص نشاطك في متجر أبو علاء
+          إليك ملخّص نشاطك في متجر أبو علاء ·{" "}
+          <span className="text-gold">{TIER_LABELS[user?.tier ?? "NEW"]}</span>
         </p>
       </div>
 
@@ -59,16 +78,28 @@ export default async function AccountPage() {
         ))}
       </div>
 
+      <ProfileForm
+        name={user?.name ?? ""}
+        phone={user?.phone ?? ""}
+        locale={user?.locale ?? "ar"}
+      />
+
       <div className="rounded-lg border bg-card p-6">
-        <h2 className="mb-3 font-semibold">بيانات الحساب</h2>
+        <h2 className="mb-3 font-semibold">معلومات إضافية</h2>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">الاسم</dt>
-            <dd className="font-medium">{session!.user.name}</dd>
+            <dt className="text-muted-foreground">البريد الإلكتروني</dt>
+            <dd className="font-medium">{user?.email}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">البريد الإلكتروني</dt>
-            <dd className="font-medium">{session!.user.email}</dd>
+            <dt className="text-muted-foreground">تاريخ الانضمام</dt>
+            <dd className="font-medium">
+              {user?.createdAt
+                ? new Intl.DateTimeFormat("ar", {
+                    dateStyle: "medium",
+                  }).format(user.createdAt)
+                : "—"}
+            </dd>
           </div>
         </dl>
       </div>
