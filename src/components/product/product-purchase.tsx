@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingBag, Heart, Check } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WishlistButton } from "@/components/product/wishlist-button";
 import { useCart } from "@/lib/store/cart";
 
 interface Variant {
@@ -20,6 +21,8 @@ interface ProductPurchaseProps {
   price: number;
   currency: string;
   variants: Variant[];
+  isLoggedIn?: boolean;
+  inWishlist?: boolean;
 }
 
 export function ProductPurchase({
@@ -28,6 +31,8 @@ export function ProductPurchase({
   price,
   currency,
   variants,
+  isLoggedIn = false,
+  inWishlist = false,
 }: ProductPurchaseProps) {
   const router = useRouter();
   const addItem = useCart((s) => s.addItem);
@@ -209,14 +214,11 @@ export function ProductPurchase({
         >
           اشترِ الآن
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="أضف إلى المفضلة"
-          className="size-12"
-        >
-          <Heart className="size-5" />
-        </Button>
+        <WishlistButton
+          productId={productId}
+          initialInWishlist={inWishlist}
+          isLoggedIn={isLoggedIn}
+        />
       </div>
     </div>
   );

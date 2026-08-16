@@ -13,7 +13,18 @@ const FREE_SHIPPING_THRESHOLD = 500;
 const SHIPPING_COST = 30;
 const TAX_RATE = 0.1;
 
-export function CheckoutView() {
+export interface PaymentMethodOption {
+  code: string;
+  name: string;
+  description: string | null;
+  instructions: string | null;
+}
+
+export function CheckoutView({
+  paymentMethods = [],
+}: {
+  paymentMethods?: PaymentMethodOption[];
+}) {
   const router = useRouter();
   const items = useCart((s) => s.items);
   const subtotal = useCart((s) => s.subtotal());
@@ -22,6 +33,9 @@ export function CheckoutView() {
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState(
+    paymentMethods[0]?.code ?? "cod"
+  );
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
@@ -150,26 +164,47 @@ export function CheckoutView() {
         {/* طريقة الدفع */}
         <fieldset className="space-y-3 rounded-lg border p-5">
           <legend className="px-2 font-semibold">طريقة الدفع</legend>
-          <label className="flex items-center gap-3 rounded-md border p-3">
-            <input
-              type="radio"
-              name="paymentMethod"
-              value="cod"
-              defaultChecked
-              className="size-4"
-            />
-            <span>الدفع عند الاستلام</span>
-          </label>
-          <label className="flex items-center gap-3 rounded-md border p-3 opacity-60">
-            <input
-              type="radio"
-              name="paymentMethod"
-              value="card"
-              disabled
-              className="size-4"
-            />
-            <span>بطاقة ائتمان (قريباً)</span>
-          </label>
+          {paymentMethods.length === 0 ? (
+            <label className="flex items-center gap-3 rounded-md border p-3">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cod"
+                defaultChecked
+                className="size-4"
+              />
+              <span>الدفع عند الاستلام</span>
+            </label>
+          ) : (
+            paymentMethods.map((m) => (
+              <label
+                key={m.code}
+                className="flex cursor-pointer flex-col gap-1 rounded-md border p-3 has-[:checked]:border-gold has-[:checked]:bg-gold/5"
+              >
+                <span className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={m.code}
+                    checked={selectedMethod === m.code}
+                    onChange={() => setSelectedMethod(m.code)}
+                    className="size-4"
+                  />
+                  <span className="font-medium">{m.name}</span>
+                </span>
+                {m.description && (
+                  <span className="ps-7 text-xs text-muted-foreground">
+                    {m.description}
+                  </span>
+                )}
+                {selectedMethod === m.code && m.instructions && (
+                  <span className="ps-7 text-xs text-gold">
+                    {m.instructions}
+                  </span>
+                )}
+              </label>
+            ))
+          )}
         </fieldset>
       </div>
 

@@ -12,7 +12,6 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     // تسجيل الخطأ لأدوات المراقبة (تُضاف لاحقاً)
-    // eslint-disable-next-line no-console
     console.error(error);
   }, [error]);
 

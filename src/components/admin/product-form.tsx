@@ -211,9 +211,9 @@ export function ProductForm({
       <div className="rounded-lg border bg-card p-5">
         <MediaUploader
           name="media"
-          label="صور وفيديو المنتج"
+          label="صور المنتج والفيديو (يمكنك رفع عدة صور وفيديو)"
           allowVideo
-          maxFiles={8}
+          maxFiles={10}
           defaultValue={defaultValues?.media ?? []}
         />
       </div>

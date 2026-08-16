@@ -17,7 +17,7 @@ const orderSchema = z.object({
     street: z.string().min(1),
     building: z.string().optional(),
   }),
-  paymentMethod: z.enum(["cod", "card"]),
+  paymentMethod: z.string().min(1).max(40),
   items: z
     .array(
       z.object({
@@ -137,7 +137,8 @@ export async function POST(request: Request) {
           items: { create: orderItems },
           payments: {
             create: {
-              provider: data.paymentMethod === "cod" ? "cod" : "mock",
+              provider:
+                data.paymentMethod === "cod" ? "cod" : data.paymentMethod,
               amount: grandTotal,
               currency: "TRY",
               status: "PENDING",

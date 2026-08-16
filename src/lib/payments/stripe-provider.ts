@@ -30,6 +30,7 @@ export class StripePaymentProvider implements PaymentProvider {
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     this.getSecret();
+    void input;
     // مثال الربط الحقيقي (يتطلب حزمة stripe):
     //
     // import Stripe from "stripe";

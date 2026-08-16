@@ -13,6 +13,8 @@ export class SmtpChannel implements NotificationChannel {
     if (!host) {
       return { ok: false, error: "SMTP غير مضبوط" };
     }
+    // للتفعيل: ثبّت nodemailer وأزل التعليقات، مستخدماً message.to/subject/body/html
+    void message;
     // import nodemailer from "nodemailer";
     // const transport = nodemailer.createTransport({
     //   host,

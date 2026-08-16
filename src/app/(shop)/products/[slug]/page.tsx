@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, calcDiscountPercent } from "@/lib/format";
@@ -8,6 +7,7 @@ import { RatingStars } from "@/components/product/rating-stars";
 import { ReviewForm } from "@/components/product/review-form";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductPurchase } from "@/components/product/product-purchase";
+import { ProductGallery } from "@/components/product/product-gallery";
 import { auth } from "@/lib/auth";
 import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
@@ -77,6 +77,19 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   const session = await auth();
+
+  // هل المنتج في مفضلة المستخدم الحالي؟
+  const inWishlist = session?.user?.id
+    ? !!(await prisma.wishlistItem.findUnique({
+        where: {
+          userId_productId: {
+            userId: session.user.id,
+            productId: product.id,
+          },
+        },
+        select: { id: true },
+      }))
+    : false;
 
   // زيادة عداد المشاهدات (دون انتظار)
   prisma.product
@@ -167,48 +180,22 @@ export default async function ProductDetailPage({
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* معرض الصور */}
-        <div className="space-y-3">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-lg border bg-secondary">
-            {product.images[0] ? (
-              <Image
-                src={product.images[0].url}
-                alt={product.images[0].altText ?? product.name}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                لا توجد صورة
-              </div>
-            )}
-            {discount > 0 && (
-              <span className="absolute start-3 top-3 rounded bg-destructive px-2 py-1 text-sm font-medium text-destructive-foreground">
-                خصم {discount}%
-              </span>
-            )}
-          </div>
-          {product.images.length > 1 && (
-            <div className="grid grid-cols-5 gap-2">
-              {product.images.slice(0, 5).map((img) => (
-                <div
-                  key={img.id}
-                  className="relative aspect-square overflow-hidden rounded-md border bg-secondary"
-                >
-                  <Image
-                    src={img.url}
-                    alt={img.altText ?? product.name}
-                    fill
-                    sizes="100px"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* معرض الصور والفيديو */}
+        <ProductGallery
+          productName={product.name}
+          discount={discount}
+          media={[
+            ...product.images.map((img) => ({
+              type: "image" as const,
+              url: img.url,
+              alt: img.altText,
+            })),
+            ...product.videos.map((v) => ({
+              type: "video" as const,
+              url: v.url,
+            })),
+          ]}
+        />
 
         {/* التفاصيل والشراء */}
         <div className="space-y-5">
@@ -255,6 +242,8 @@ export default async function ProductDetailPage({
             productName={product.name}
             price={price}
             currency={product.currency}
+            isLoggedIn={!!session?.user}
+            inWishlist={inWishlist}
             variants={product.variants.map((v) => ({
               id: v.id,
               color: v.color,
