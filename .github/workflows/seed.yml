@@ -1,0 +1,34 @@
+name: Seed Database
+
+# تشغيل يدوي فقط لزراعة البيانات التجريبية على قاعدة البيانات السحابية
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'اكتب "seed" للتأكيد'
+        required: true
+        default: ""
+
+jobs:
+  seed:
+    name: Seed
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'seed' }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
+      SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+      SEED_ADMIN_NAME: "مدير المتجر"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+      - name: Seed
+        run: npm run prisma:seed

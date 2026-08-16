@@ -1,0 +1,14 @@
+# تثبيت نهايات الأسطر لمنع تحذيرات CRLF على ويندوز
+* text=auto eol=lf
+
+# ملفات ثنائية
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.node binary
