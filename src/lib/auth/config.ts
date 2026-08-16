@@ -4,6 +4,9 @@ import { isStaff } from "@/lib/auth/permissions";
 
 // إعدادات قابلة للتشغيل في Edge (middleware) دون Prisma
 export const authConfig = {
+  // الثقة بالمضيف مطلوبة على Vercel/الوكلاء العكسيين
+  // نفعّلها صراحةً بدل الاعتماد على متغير البيئة فقط
+  trustHost: true,
   pages: {
     signIn: "/login",
     error: "/login",
