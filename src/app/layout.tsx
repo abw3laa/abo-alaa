@@ -4,6 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { CookieConsent } from "@/components/analytics/cookie-consent";
+import { Analytics } from "@/components/analytics/analytics";
 import "./globals.css";
 
 const arabicFont = IBM_Plex_Sans_Arabic({
@@ -34,10 +36,25 @@ export const metadata: Metadata = {
     "متجر أبو علاء الإلكتروني لبيع الملابس والأحذية والإكسسوارات والإلكترونيات ومنتجات المنزل بأفضل الأسعار مع شحن سريع ودفع آمن.",
   keywords: ["متجر", "ملابس", "أزياء", "تسوق", "أبو علاء"],
   metadataBase: new URL(siteUrl),
+  alternates: {
+    canonical: "/",
+    languages: {
+      ar: "/",
+      en: "/",
+    },
+  },
   openGraph: {
     type: "website",
     locale: "ar_AR",
     siteName: "أبو علاء",
+    title: "أبو علاء | متجر الأزياء والمنتجات المتنوعة",
+    description:
+      "تسوّق أحدث تشكيلات الملابس والإكسسوارات بأفضل الأسعار مع شحن سريع ودفع آمن.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "أبو علاء | متجر الأزياء والمنتجات المتنوعة",
+    description: "تسوّق أحدث التشكيلات بأفضل الأسعار.",
   },
   robots: { index: true, follow: true },
 };
@@ -60,9 +77,21 @@ export default async function RootLayout({
   const messages = await getMessages();
   const dir = locale === "ar" ? "rtl" : "ltr";
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "أبو علاء",
+    url: siteUrl,
+    logo: `${siteUrl}/icon.png`,
+  };
+
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={`${arabicFont.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -72,7 +101,9 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             {children}
           </NextIntlClientProvider>
+          <CookieConsent />
         </ThemeProvider>
+        <Analytics />
         <SpeedInsights />
       </body>
     </html>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { notifyOrderConfirmed } from "@/lib/notifications";
 
 const orderSchema = z.object({
   customer: z.object({
@@ -135,6 +136,14 @@ export async function POST(request: Request) {
       });
 
       return order;
+    });
+
+    // إشعار تأكيد الطلب عبر القنوات (لا يُفشل الطلب عند تعذّره)
+    await notifyOrderConfirmed({
+      userId: session?.user?.id ?? null,
+      email: session?.user?.email ?? data.customer.email,
+      phone: data.customer.phone,
+      orderNumber: result.orderNumber,
     });
 
     return NextResponse.json(

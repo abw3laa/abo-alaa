@@ -26,6 +26,7 @@ export async function Footer() {
       links: [
         { label: t("privacy"), href: "/privacy" },
         { label: t("terms"), href: "/terms" },
+        { label: "إمكانية الوصول", href: "/accessibility" },
       ],
     },
   ];
