@@ -35,7 +35,10 @@ function parseMedia(raw?: string): MediaItem[] {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr.filter(
-      (m) => m && typeof m.url === "string" && (m.type === "image" || m.type === "video")
+      (m) =>
+        m &&
+        typeof m.url === "string" &&
+        (m.type === "image" || m.type === "video")
     );
   } catch {
     return [];

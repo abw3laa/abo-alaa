@@ -16,6 +16,7 @@ jobs:
     if: ${{ github.event.inputs.confirm == 'seed' }}
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
       SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
       SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
       SEED_ADMIN_NAME: "مدير المتجر"

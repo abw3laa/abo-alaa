@@ -86,7 +86,10 @@ export function HeroCarousel({
   }
 
   return (
-    <section className="relative overflow-hidden" aria-roledescription="carousel">
+    <section
+      className="relative overflow-hidden"
+      aria-roledescription="carousel"
+    >
       <div className="relative min-h-[420px]">
         {slides.map((slide, i) => (
           <div

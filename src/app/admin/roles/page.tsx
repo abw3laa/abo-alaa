@@ -1,8 +1,5 @@
 import { requirePermission } from "@/lib/auth/guard";
-import {
-  PERMISSIONS,
-  ROLE_PERMISSIONS,
-} from "@/lib/auth/permissions";
+import { PERMISSIONS, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { RolesManager } from "@/components/admin/roles-manager";

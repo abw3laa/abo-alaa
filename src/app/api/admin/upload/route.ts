@@ -40,10 +40,7 @@ export async function POST(request: Request) {
   }
 
   if (!ALLOWED.includes(file.type)) {
-    return NextResponse.json(
-      { error: "نوع الملف غير مدعوم" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "نوع الملف غير مدعوم" }, { status: 400 });
   }
 
   const isVideo = file.type.startsWith("video/");
@@ -63,7 +60,10 @@ export async function POST(request: Request) {
       access: "public",
       contentType: file.type,
     });
-    return NextResponse.json({ url: blob.url, type: isVideo ? "video" : "image" });
+    return NextResponse.json({
+      url: blob.url,
+      type: isVideo ? "video" : "image",
+    });
   } catch {
     return NextResponse.json({ error: "تعذّر رفع الملف" }, { status: 500 });
   }

@@ -1,7 +1,10 @@
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/prisma";
-import { SettingsForm, type SettingField } from "@/components/admin/settings-form";
+import {
+  SettingsForm,
+  type SettingField,
+} from "@/components/admin/settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -86,8 +89,7 @@ export default async function AdminSettingsPage() {
   const stored = new Map(
     rows.map((r) => {
       // القيمة مخزّنة كـ JSON؛ نحوّلها إلى نص عند الحاجة
-      const v =
-        typeof r.value === "string" ? r.value : JSON.stringify(r.value);
+      const v = typeof r.value === "string" ? r.value : JSON.stringify(r.value);
       return [r.key, v.replace(/^"|"$/g, "")];
     })
   );

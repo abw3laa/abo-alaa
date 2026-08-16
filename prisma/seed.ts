@@ -465,7 +465,8 @@ async function main() {
       code: "bank_transfer",
       name: "تحويل بنكي",
       description: "حوّل المبلغ إلى حسابنا البنكي",
-      instructions: "IBAN: TR00 0000 0000 0000 0000 0000 00 — باسم متجر أبو علاء",
+      instructions:
+        "IBAN: TR00 0000 0000 0000 0000 0000 00 — باسم متجر أبو علاء",
       provider: "manual",
       sortOrder: 1,
     },

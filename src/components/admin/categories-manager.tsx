@@ -38,7 +38,10 @@ function CategoryForm({
     }
   }, [state, router, onDone]);
   return (
-    <form action={action} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2">
+    <form
+      action={action}
+      className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2"
+    >
       {category && <input type="hidden" name="id" value={category.id} />}
       {category?.image && (
         <input type="hidden" name="image" value={category.image} />

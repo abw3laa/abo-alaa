@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MediaUploader, type UploadedMedia } from "@/components/admin/media-uploader";
+import {
+  MediaUploader,
+  type UploadedMedia,
+} from "@/components/admin/media-uploader";
 import type { ActionResult } from "@/app/admin/products/actions";
 
 interface Option {

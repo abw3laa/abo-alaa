@@ -40,9 +40,7 @@ export function SettingsForm({ fields }: { fields: SettingField[] }) {
     <form action={action} className="space-y-6">
       {Object.entries(groups).map(([group, items]) => (
         <div key={group} className="rounded-lg border bg-card p-5">
-          <h3 className="mb-4 font-semibold">
-            {GROUP_LABELS[group] ?? group}
-          </h3>
+          <h3 className="mb-4 font-semibold">{GROUP_LABELS[group] ?? group}</h3>
           <div className="space-y-4">
             {items.map((f) => (
               <div key={f.key} className="space-y-1.5">

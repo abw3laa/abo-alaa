@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 async function getSetting(key: string): Promise<string | null> {
   const row = await prisma.setting.findUnique({ where: { key } });
   if (!row) return null;
-  const v = typeof row.value === "string" ? row.value : JSON.stringify(row.value);
+  const v =
+    typeof row.value === "string" ? row.value : JSON.stringify(row.value);
   return v.replace(/^"|"$/g, "");
 }
 

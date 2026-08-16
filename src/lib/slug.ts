@@ -18,4 +18,3 @@ export function uniqueSlug(text: string): string {
   const suffix = Math.random().toString(36).slice(2, 7);
   return `${base}-${suffix}`;
 }
-

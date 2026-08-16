@@ -36,7 +36,10 @@ function AddressForm({
     }
   }, [state, router, onDone]);
   return (
-    <form action={action} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2">
+    <form
+      action={action}
+      className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2"
+    >
       {address && <input type="hidden" name="id" value={address.id} />}
       <input
         name="fullName"

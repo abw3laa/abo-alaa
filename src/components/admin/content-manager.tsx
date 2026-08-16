@@ -165,7 +165,13 @@ function PostForm({ post, onDone }: { post?: Post; onDone: () => void }) {
 }
 
 // ---------- البانرات ----------
-function BannerForm({ banner, onDone }: { banner?: Banner; onDone: () => void }) {
+function BannerForm({
+  banner,
+  onDone,
+}: {
+  banner?: Banner;
+  onDone: () => void;
+}) {
   const router = useRouter();
   const [state, action, pending] = useActionState(saveBanner, null);
   useEffect(() => {

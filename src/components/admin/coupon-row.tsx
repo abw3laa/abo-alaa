@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatDate } from "@/lib/format";
-import {
-  updateCoupon,
-  deleteCoupon,
-} from "@/app/admin/coupons/edit-actions";
+import { updateCoupon, deleteCoupon } from "@/app/admin/coupons/edit-actions";
 
 const TYPE_LABELS: Record<string, string> = {
   PERCENTAGE: "نسبة مئوية",

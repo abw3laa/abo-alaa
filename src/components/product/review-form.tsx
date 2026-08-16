@@ -50,7 +50,10 @@ export function ReviewForm({
   }
 
   return (
-    <form action={formAction} className="space-y-3 rounded-lg border bg-card p-4">
+    <form
+      action={formAction}
+      className="space-y-3 rounded-lg border bg-card p-4"
+    >
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="rating" value={rating} />
 

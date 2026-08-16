@@ -36,7 +36,10 @@ function MethodForm({
     }
   }, [state, router, onDone]);
   return (
-    <form action={action} className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2">
+    <form
+      action={action}
+      className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2"
+    >
       {method && <input type="hidden" name="id" value={method.id} />}
       <input
         name="code"
