@@ -1,0 +1,842 @@
+// ==========================================
+// متجر Abo-alaa - مخطط قاعدة البيانات
+// Prisma + PostgreSQL
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- المصادقة والصلاحيات ----------
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  PRODUCT_MANAGER
+  ORDER_MANAGER
+  CONTENT_EDITOR
+  CUSTOMER_SUPPORT
+  ANALYST
+  CUSTOMER
+}
+
+enum CustomerTier {
+  NEW
+  REGULAR
+  VIP
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  phone         String?
+  passwordHash  String?
+  image         String?
+  role          UserRole  @default(CUSTOMER)
+  tier          CustomerTier @default(NEW)
+  isActive      Boolean   @default(true)
+  isBanned      Boolean   @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  locale        String    @default("ar")
+  currency      String    @default("TRY")
+  loyaltyPoints Int       @default(0)
+  lastActiveAt  DateTime?
+  totalSpent    Decimal   @default(0) @db.Decimal(12, 2)
+
+  accounts      Account[]
+  sessions      Session[]
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  questions     Question[]
+  wishlist      WishlistItem[]
+  carts         Cart[]
+  notifications Notification[]
+  paymentMethods SavedPaymentMethod[]
+  auditLogs     AuditLog[]
+  blogPosts     BlogPost[]
+  returns       Return[]
+  loyaltyLedger LoyaltyLedger[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// نظام الصلاحيات المرن (بالإضافة إلى الأدوار)
+model Permission {
+  id          String  @id @default(uuid())
+  key         String  @unique // مثال: products.create
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  role         UserRole
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+
+// ---------- الكتالوج ----------
+
+enum PublishStatus {
+  PUBLISHED
+  DRAFT
+  ARCHIVED
+}
+
+enum ProductGender {
+  MEN
+  WOMEN
+  UNISEX
+  KIDS
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  nameEn      String?
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+  icon        String?
+  parentId    String?
+  parent      Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  seoTitle    String?
+  seoDescription String?
+
+  products    ProductCategory[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Brand {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  description String? @db.Text
+  isActive  Boolean  @default(true)
+  seoTitle  String?
+  seoDescription String?
+  products  Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([slug])
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  name           String
+  nameEn         String?
+  slug           String   @unique
+  shortDescription String? @db.Text
+  description    String?  @db.Text
+  material       String?
+  careInstructions String? @db.Text
+  gender         ProductGender?
+  ageGroup       String?
+
+  price          Decimal  @db.Decimal(12, 2)
+  compareAtPrice Decimal? @db.Decimal(12, 2) // السعر قبل الخصم
+  cost           Decimal? @db.Decimal(12, 2) // التكلفة
+  currency       String   @default("TRY")
+
+  sku            String?  @unique
+  barcode        String?
+  weight         Decimal? @db.Decimal(10, 3) // كجم
+  width          Decimal? @db.Decimal(10, 2)
+  height         Decimal? @db.Decimal(10, 2)
+  depth          Decimal? @db.Decimal(10, 2)
+
+  status         PublishStatus @default(DRAFT)
+  publishAt      DateTime?
+  isFeatured     Boolean  @default(false)
+
+  ratingAverage  Float    @default(0)
+  ratingCount    Int      @default(0)
+  viewCount      Int      @default(0)
+  salesCount     Int      @default(0)
+
+  brandId        String?
+  brand          Brand?   @relation(fields: [brandId], references: [id])
+
+  seoTitle       String?
+  seoDescription String?
+
+  categories     ProductCategory[]
+  variants       ProductVariant[]
+  images         ProductImage[]
+  videos         ProductVideo[]
+  tags           ProductTag[]
+  reviews        Review[]
+  questions      Question[]
+  wishlistItems  WishlistItem[]
+  orderItems     OrderItem[]
+  cartItems      CartItem[]
+
+  relatedFrom    RelatedProduct[] @relation("RelatedFrom")
+  relatedTo      RelatedProduct[] @relation("RelatedTo")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  @@index([slug])
+  @@index([status])
+  @@index([brandId])
+  @@index([isFeatured])
+  @@index([deletedAt])
+}
+
+model RelatedProduct {
+  id        String  @id @default(uuid())
+  productId String
+  relatedId String
+  type      String  @default("related") // related | alternative | bought_together
+  product   Product @relation("RelatedFrom", fields: [productId], references: [id], onDelete: Cascade)
+  related   Product @relation("RelatedTo", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, relatedId, type])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model Tag {
+  id       String       @id @default(uuid())
+  name     String       @unique
+  slug     String       @unique
+  products ProductTag[]
+}
+
+model ProductTag {
+  productId String
+  tagId     String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+}
+
+// المتغيرات: تركيبة لون + مقاس لها مخزون وسعر خاص
+model ProductVariant {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku        String?  @unique
+  color      String?
+  colorHex   String?
+  size       String?
+  price      Decimal? @db.Decimal(12, 2) // إن اختلف عن سعر المنتج
+  image      String?
+  inventory  Inventory?
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model Inventory {
+  id         String   @id @default(uuid())
+  variantId  String   @unique
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(0)
+  reserved   Int      @default(0) // محجوز لطلبات قيد المعالجة
+  lowStockThreshold Int @default(5)
+  updatedAt  DateTime @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  is360     Boolean @default(false)
+}
+
+model ProductVideo {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  thumbnail String?
+  sortOrder Int     @default(0)
+}
+
+// ---------- المراجعات والأسئلة ----------
+
+model Review {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Int
+  title      String?
+  comment    String?  @db.Text
+  images     String[] // روابط صور المراجعة
+  isApproved Boolean  @default(false)
+  isVerifiedPurchase Boolean @default(false)
+  helpfulCount Int    @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question  String   @db.Text
+  answer    String?  @db.Text
+  answeredAt DateTime?
+  isPublished Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+// ---------- المفضلة والسلة ----------
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model Cart {
+  id          String     @id @default(uuid())
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId   String?    // للزوار غير المسجلين
+  couponCode  String?
+  items       CartItem[]
+  isAbandoned Boolean    @default(false)
+  reminderSentAt DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity  Int      @default(1)
+  savedForLater Boolean @default(false)
+  priceSnapshot Decimal @db.Decimal(12, 2) // السعر وقت الإضافة لكشف التغيّر
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+}
+
+// ---------- العناوين ----------
+
+model Address {
+  id         String  @id @default(uuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName   String
+  phone      String
+  country    String
+  city       String
+  state      String?
+  street     String
+  building   String?
+  postalCode String?
+  notes      String?
+  isDefault  Boolean @default(false)
+
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ---------- الطلبات ----------
+
+enum OrderStatus {
+  PENDING       // قيد المراجعة
+  CONFIRMED     // تم التأكيد
+  PROCESSING    // قيد التجهيز
+  SHIPPED       // تم الشحن
+  DELIVERED     // تم التوصيل
+  CANCELLED     // ملغي
+  RETURNED      // مسترجع
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  orderNumber    String      @unique
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id])
+
+  // بيانات الضيف/العميل وقت الطلب
+  guestEmail     String?
+  guestPhone     String?
+  customerName   String
+
+  status         OrderStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(PENDING)
+
+  subtotal       Decimal     @db.Decimal(12, 2)
+  discountTotal  Decimal     @default(0) @db.Decimal(12, 2)
+  shippingTotal  Decimal     @default(0) @db.Decimal(12, 2)
+  taxTotal       Decimal     @default(0) @db.Decimal(12, 2)
+  grandTotal     Decimal     @db.Decimal(12, 2)
+  currency       String      @default("TRY")
+
+  couponCode     String?
+
+  shippingAddressId String?
+  shippingAddress   Address? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddressId  String?
+  billingAddress    Address? @relation("BillingAddress", fields: [billingAddressId], references: [id])
+
+  shippingMethod String?
+  internalNotes  String?     @db.Text
+
+  items          OrderItem[]
+  payments       Payment[]
+  shipments      Shipment[]
+  returns        Return[]
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  @@index([orderNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  variantId  String?
+  variant    ProductVariant? @relation(fields: [variantId], references: [id])
+
+  // لقطة من بيانات المنتج وقت الطلب
+  productName String
+  variantInfo String? // مثال: "أحمر / L"
+  sku        String?
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  quantity   Int
+  lineTotal  Decimal  @db.Decimal(12, 2)
+
+  @@index([orderId])
+}
+
+// ---------- الدفع ----------
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider      String        // stripe | paypal | cod | mock
+  providerRef   String?       // معرّف العملية لدى المزود (Token/Intent)
+  amount        Decimal       @db.Decimal(12, 2)
+  currency      String        @default("TRY")
+  status        PaymentStatus @default(PENDING)
+  idempotencyKey String?      @unique
+  errorMessage  String?
+
+  refunds       Refund[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+model Refund {
+  id        String   @id @default(uuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(12, 2)
+  reason    String?
+  providerRef String?
+  createdAt DateTime @default(now())
+}
+
+model SavedPaymentMethod {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    String
+  token       String   // توكن من المزود - لا نخزّن بيانات البطاقة أبدًا
+  brand       String?  // visa | mastercard
+  last4       String?
+  expMonth    Int?
+  expYear     Int?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model WebhookEvent {
+  id         String   @id @default(uuid())
+  provider   String
+  eventId    String   @unique // لمنع التكرار (Idempotency)
+  eventType  String
+  payload    Json
+  processed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// ---------- الشحن ----------
+
+model ShippingCarrier {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  zones     ShippingZone[]
+  createdAt DateTime @default(now())
+}
+
+model ShippingZone {
+  id          String   @id @default(uuid())
+  carrierId   String
+  carrier     ShippingCarrier @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  name        String
+  countries   String[] // رموز الدول
+  baseCost    Decimal  @db.Decimal(12, 2)
+  perKgCost   Decimal  @default(0) @db.Decimal(12, 2)
+  freeOver    Decimal? @db.Decimal(12, 2) // شحن مجاني فوق مبلغ
+  estimatedDaysMin Int @default(2)
+  estimatedDaysMax Int @default(5)
+  isExpress   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+}
+
+model Shipment {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  carrier      String?
+  trackingNumber String?
+  status       String   @default("pending")
+  shippedAt    DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+// ---------- الاسترجاع ----------
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  REFUNDED
+}
+
+model Return {
+  id        String       @id @default(uuid())
+  orderId   String
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  reason    String       @db.Text
+  status    ReturnStatus @default(REQUESTED)
+  type      String       @default("return") // return | exchange
+  adminNotes String?     @db.Text
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([orderId])
+}
+
+// ---------- الكوبونات والعروض ----------
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
+}
+
+model Coupon {
+  id             String     @id @default(uuid())
+  code           String     @unique
+  description    String?
+  type           CouponType
+  value          Decimal    @db.Decimal(12, 2)
+  minOrderAmount Decimal?   @db.Decimal(12, 2)
+  maxUses        Int?
+  maxUsesPerUser Int?
+  usedCount      Int        @default(0)
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  isActive       Boolean    @default(true)
+  firstOrderOnly Boolean    @default(false)
+  categoryIds    String[]
+  brandIds       String[]
+  allowStacking  Boolean    @default(false)
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([code])
+}
+
+model Promotion {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   // category | brand | quantity | new_customer
+  config      Json     // إعدادات مرنة
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------- نقاط الولاء ----------
+
+model LoyaltyLedger {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int      // موجب = ربح، سالب = استخدام
+  reason    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------- المحتوى ----------
+
+model Banner {
+  id        String   @id @default(uuid())
+  title     String?
+  subtitle  String?
+  image     String
+  mobileImage String?
+  link      String?
+  buttonText String?
+  position  String   @default("home_hero") // home_hero | home_secondary | category_top
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  startsAt  DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlogPost {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?       @db.Text
+  content     String        @db.Text
+  coverImage  String?
+  category    String?
+  status      PublishStatus @default(DRAFT)
+  publishAt   DateTime?
+  authorId    String?
+  author      User?         @relation(fields: [authorId], references: [id])
+  seoTitle    String?
+  seoDescription String?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
+
+  @@index([slug])
+  @@index([status])
+}
+
+model FaqItem {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String   @db.Text
+  category  String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+}
+
+// صفحات ثابتة (من نحن، الخصوصية، الشروط...)
+model StaticPage {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  title     String
+  content   String   @db.Text
+  seoTitle  String?
+  seoDescription String?
+  isPublished Boolean @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- الإعدادات ----------
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- الإشعارات ----------
+
+enum NotificationType {
+  ORDER_CONFIRMED
+  ORDER_STATUS
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  BACK_IN_STOCK
+  LOW_STOCK
+  PROMOTION
+  ABANDONED_CART
+  GENERAL
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(GENERAL)
+  title     String
+  message   String           @db.Text
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+// ---------- سجل التدقيق ----------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String   // مثال: product.update
+  entity    String?  // مثال: Product
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
