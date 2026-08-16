@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { notifyOrderConfirmed } from "@/lib/notifications";
+import { rateLimit, getClientId } from "@/lib/rate-limit";
 
 const orderSchema = z.object({
   customer: z.object({
@@ -39,6 +40,16 @@ function generateOrderNumber(): string {
 
 export async function POST(request: Request) {
   try {
+    // حماية من إنشاء طلبات مكثّف: 10 طلبات كل دقيقة
+    const clientId = getClientId(request);
+    const limit = rateLimit(`orders:${clientId}`, 10, 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "محاولات كثيرة، حاول بعد قليل" },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const parsed = orderSchema.safeParse(body);
     if (!parsed.success) {

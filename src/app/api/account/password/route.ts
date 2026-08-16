@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { rateLimit, getClientId } from "@/lib/rate-limit";
 
 const schema = z.object({
   currentPassword: z.string().min(1),
@@ -18,6 +19,19 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "يجب تسجيل الدخول" }, { status: 401 });
+  }
+
+  // حماية من محاولات تخمين كلمة المرور الحالية
+  const limit = rateLimit(
+    `pwd:${getClientId(request)}:${session.user.id}`,
+    5,
+    10 * 60_000
+  );
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "محاولات كثيرة، حاول لاحقاً" },
+      { status: 429 }
+    );
   }
 
   const body = await request.json();

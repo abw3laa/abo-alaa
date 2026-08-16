@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { registerSchema } from "@/lib/validations/auth";
+import { rateLimit, getClientId } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    // حماية من إنشاء حسابات مكثّف: 5 محاولات كل 10 دقائق
+    const clientId = getClientId(request);
+    const limit = rateLimit(`register:${clientId}`, 5, 10 * 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "محاولات كثيرة، حاول لاحقاً" },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 
