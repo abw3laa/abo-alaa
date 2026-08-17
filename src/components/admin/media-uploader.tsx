@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
+import { upload } from "@vercel/blob/client";
 import { Upload, X, Loader2 } from "lucide-react";
 
 export interface UploadedMedia {
@@ -41,18 +42,21 @@ export function MediaUploader({
     try {
       for (const file of Array.from(files)) {
         if (items.length + uploaded.length >= maxFiles) break;
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: fd,
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.error ?? "تعذّر رفع الملف");
-          continue;
+        const isVideo = file.type.startsWith("video/");
+        try {
+          // رفع مباشر إلى Vercel Blob (يتجاوز حد 4.5MB على الدوال الخادمة)
+          const blob = await upload(file.name, file, {
+            access: "public",
+            handleUploadUrl: "/api/admin/upload",
+            contentType: file.type,
+          });
+          uploaded.push({
+            url: blob.url,
+            type: isVideo ? "video" : "image",
+          });
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "تعذّر رفع الملف");
         }
-        uploaded.push({ url: data.url, type: data.type });
       }
       setItems((prev) => [...prev, ...uploaded]);
     } finally {
