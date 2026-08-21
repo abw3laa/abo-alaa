@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+# افتراضي: أقل صلاحية ممكنة على مستوى الـworkflow؛ كل Job يرفعها فقط عند الحاجة
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Lint / Typecheck / Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     env:
       # قاعدة بيانات وهمية للبناء - لا تتصل فعلياً
@@ -50,6 +56,8 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/abo_alaa?schema=public"
       DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/abo_alaa?schema=public"
@@ -67,6 +75,8 @@ jobs:
   security:
     name: Dependency Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,17 +84,21 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Audit
-        run: npm audit --audit-level=high || true
+      - name: Audit (fails build on high/critical)
+        run: npm audit --audit-level=high
 
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/abo_alaa?schema=public"
       DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/abo_alaa?schema=public"
       AUTH_SECRET: "ci-e2e-secret"
       AUTH_TRUST_HOST: "true"
+      # قيمة عشوائية لكل تشغيل CI فقط - وليست بيانات إنتاج حقيقية
+      SEED_ADMIN_PASSWORD: "${{ secrets.CI_SEED_ADMIN_PASSWORD }}"
     services:
       postgres:
         image: postgres:16-alpine

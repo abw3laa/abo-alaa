@@ -54,6 +54,11 @@ export function OrderStatusControl({
           </option>
         ))}
       </select>
+      <p className="text-xs text-muted-foreground">
+        الانتقال المسموح به عادة: قيد المراجعة ← تم التأكيد ← قيد التجهيز ←
+        تم الشحن ← تم التوصيل، مع إمكانية الإلغاء قبل الشحن. أي قفزة خارج
+        هذا التسلسل (مثال: تخطي مرحلة) تتطلب صلاحية تصحيح استثنائية.
+      </p>
       <Button
         onClick={handleSave}
         disabled={pending || status === currentStatus}

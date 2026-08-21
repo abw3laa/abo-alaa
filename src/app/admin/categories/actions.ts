@@ -58,6 +58,10 @@ export async function saveCategory(
     }
     const d = parsed.data;
 
+    if (d.id && d.parentId === d.id) {
+      return { ok: false, error: "لا يمكن أن يكون التصنيف أباً لنفسه" };
+    }
+
     const data = {
       name: d.name,
       nameEn: d.nameEn || null,

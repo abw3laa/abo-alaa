@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { rateLimit, getClientId } from "@/lib/rate-limit";
+import { logAudit } from "@/lib/audit";
 
 const schema = z.object({
   currentPassword: z.string().min(1),
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   // حماية من محاولات تخمين كلمة المرور الحالية
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `pwd:${getClientId(request)}:${session.user.id}`,
     5,
     10 * 60_000
@@ -66,7 +67,20 @@ export async function POST(request: Request) {
   const newHash = await hashPassword(parsed.data.newPassword);
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash: newHash },
+    data: {
+      passwordHash: newHash,
+      // يُبطل أي JWT صدر قبل هذه اللحظة (بما فيها الجلسة الحالية - سيُطلب
+      // من المستخدم تسجيل الدخول من جديد، وهو السلوك الصحيح أمنياً بعد
+      // تغيير كلمة المرور)
+      sessionsInvalidatedAt: new Date(),
+    },
+  });
+
+  await logAudit({
+    userId: user.id,
+    action: "auth.password_changed",
+    entity: "User",
+    entityId: user.id,
   });
 
   return NextResponse.json({ success: true });

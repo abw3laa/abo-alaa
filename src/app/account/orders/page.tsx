@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,9 +20,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function OrdersPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const orders = await prisma.order.findMany({
-    where: { userId: session!.user.id, deletedAt: null },
+    where: { userId: user.id, deletedAt: null },
     include: { items: true },
     orderBy: { createdAt: "desc" },
   });
@@ -46,7 +46,11 @@ export default async function OrdersPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">طلباتي</h1>
       {orders.map((order) => (
-        <div key={order.id} className="rounded-lg border bg-card p-4">
+        <Link
+          key={order.id}
+          href={`/account/orders/${order.id}`}
+          className="block rounded-lg border bg-card p-4 transition hover:border-gold"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-semibold">{order.orderNumber}</p>
@@ -66,7 +70,7 @@ export default async function OrdersPage() {
               {formatPrice(Number(order.grandTotal), order.currency, "ar")}
             </span>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

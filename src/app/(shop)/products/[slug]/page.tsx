@@ -9,6 +9,8 @@ import { ProductCard } from "@/components/product/product-card";
 import { ProductPurchase } from "@/components/product/product-purchase";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { auth } from "@/lib/auth";
+import { safeJsonLd } from "@/lib/security/json-ld";
+import { headers } from "next/headers";
 import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
 function decodeSlug(raw: string) {
@@ -153,11 +155,14 @@ export default async function ProductDetailPage({
         : undefined,
   };
 
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <div className="container py-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
 
       {/* مسار التنقل */}

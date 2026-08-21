@@ -44,6 +44,8 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "date-fns": "4.1.0",
+    "ioredis": "5.4.2",
+    "isomorphic-dompurify": "2.19.0",
     "lucide-react": "0.469.0",
     "next": "15.5.23",
     "next-auth": "^5.0.0-beta.25",
@@ -53,6 +55,8 @@
     "react-dom": "19.0.0",
     "react-hook-form": "7.54.2",
     "recharts": "2.15.0",
+    "@sentry/nextjs": "8.47.0",
+    "stripe": "17.5.0",
     "tailwind-merge": "2.6.0",
     "zod": "3.24.1",
     "zustand": "5.0.2"

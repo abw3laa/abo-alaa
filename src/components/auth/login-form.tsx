@@ -16,6 +16,18 @@ const STAFF_ROLES = [
   "ANALYST",
 ];
 
+function getSafeCallbackPath(callbackUrl: string | null): string | null {
+  if (!callbackUrl) return null;
+
+  try {
+    const url = new URL(callbackUrl, window.location.origin);
+    if (url.origin !== window.location.origin) return null;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,7 +55,7 @@ export function LoginForm() {
     }
 
     // توجيه حسب الدور: الموظفون إلى لوحة التحكم، والعملاء إلى حسابهم
-    let destination = callbackUrl;
+    let destination = getSafeCallbackPath(callbackUrl);
     if (!destination) {
       const session = await getSession();
       const role = session?.user?.role;

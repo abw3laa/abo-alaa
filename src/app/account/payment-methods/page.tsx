@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CreditCard } from "lucide-react";
@@ -7,9 +7,9 @@ import { CreditCard } from "lucide-react";
 export const metadata: Metadata = { title: "طرق الدفع" };
 
 export default async function PaymentMethodsPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const methods = await prisma.savedPaymentMethod.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: user.id },
   });
 
   return (

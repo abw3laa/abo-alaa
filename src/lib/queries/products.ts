@@ -33,7 +33,11 @@ const SORT_MAP: Record<string, Prisma.ProductOrderByWithRelationInput> = {
  */
 export async function queryProducts(params: ProductQueryParams) {
   const perPage = Math.min(params.perPage ?? 12, 48);
-  const page = Math.max(params.page ?? 1, 1);
+  // نحدّ الحد الأقصى للصفحة أيضاً: OFFSET كبير جداً (page=999999999) يجبر
+  // قاعدة البيانات على مسح عدد ضخم من الصفوف دون فائدة فعلية للمستخدم.
+  const page = Math.min(Math.max(params.page ?? 1, 1), 500);
+  // نحدّ طول نص البحث لتفادي استعلامات ILIKE مكلفة على نصوص طويلة جداً
+  const search = params.search?.slice(0, 100);
 
   const where: Prisma.ProductWhereInput = {
     status: "PUBLISHED",
@@ -62,12 +66,12 @@ export async function queryProducts(params: ProductQueryParams) {
   if (params.onSale) {
     where.compareAtPrice = { not: null };
   }
-  if (params.search) {
+  if (search) {
     where.OR = [
-      { name: { contains: params.search, mode: "insensitive" } },
-      { description: { contains: params.search, mode: "insensitive" } },
-      { sku: { contains: params.search, mode: "insensitive" } },
-      { barcode: { contains: params.search, mode: "insensitive" } },
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { sku: { contains: search, mode: "insensitive" } },
+      { barcode: { contains: search, mode: "insensitive" } },
     ];
   }
   if (params.color || params.size || params.inStock) {

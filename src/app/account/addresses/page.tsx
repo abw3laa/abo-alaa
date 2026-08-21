@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { AddressManager } from "@/components/account/address-manager";
 
@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "العناوين المحفوظة" }
 export const dynamic = "force-dynamic";
 
 export default async function AddressesPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const addresses = await prisma.address.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: user.id },
     orderBy: { isDefault: "desc" },
   });
 

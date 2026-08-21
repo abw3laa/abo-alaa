@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     // حماية من إنشاء حسابات مكثّف: 5 محاولات كل 10 دقائق
     const clientId = getClientId(request);
-    const limit = rateLimit(`register:${clientId}`, 5, 10 * 60_000);
+    const limit = await rateLimit(`register:${clientId}`, 5, 10 * 60_000);
     if (!limit.allowed) {
       return NextResponse.json(
         { error: "محاولات كثيرة، حاول لاحقاً" },

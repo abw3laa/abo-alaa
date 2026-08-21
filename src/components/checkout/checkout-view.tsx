@@ -36,6 +36,14 @@ export function CheckoutView({
   const [selectedMethod, setSelectedMethod] = useState(
     paymentMethods[0]?.code ?? "cod"
   );
+  const [couponInput, setCouponInput] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    freeShipping: boolean;
+  } | null>(null);
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
@@ -55,9 +63,56 @@ export function CheckoutView({
     );
   }
 
-  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-  const tax = Math.round(subtotal * TAX_RATE);
-  const total = subtotal + shipping + tax;
+  const discount = appliedCoupon?.discountAmount ?? 0;
+  const discountedSubtotal = Math.max(0, subtotal - discount);
+  const shipping =
+    appliedCoupon?.freeShipping || discountedSubtotal >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : SHIPPING_COST;
+  const tax = Math.round(discountedSubtotal * TAX_RATE);
+  const total = Math.max(0, discountedSubtotal + shipping + tax);
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim();
+    if (!code) return;
+    setCouponChecking(true);
+    setCouponError(null);
+    try {
+      const res = await fetch("/api/coupons/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          items: items.map((i) => ({
+            productId: i.productId,
+            variantId: i.variantId,
+            quantity: i.quantity,
+          })),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.valid) {
+        setCouponError(json.error ?? "كود الخصم غير صالح");
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({
+        code: code.toUpperCase(),
+        discountAmount: json.discountAmount ?? 0,
+        freeShipping: !!json.freeShipping,
+      });
+    } catch {
+      setCouponError("تعذّر التحقق من الكود، حاول مرة أخرى");
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,6 +133,7 @@ export function CheckoutView({
         building: String(fd.get("building") ?? ""),
       },
       paymentMethod: String(fd.get("paymentMethod") ?? "cod"),
+      couponCode: appliedCoupon?.code,
       items: items.map((i) => ({
         productId: i.productId,
         variantId: i.variantId,
@@ -98,8 +154,14 @@ export function CheckoutView({
       return;
     }
 
-    const { orderNumber } = await res.json();
+    const { orderNumber, redirectUrl } = await res.json();
     clear();
+    // إن أعاد الخادم رابط دفع مستضافاً (مثال: Stripe Checkout)، حوّل العميل
+    // إليه لإتمام الدفع الفعلي بدل الذهاب مباشرة لصفحة "تم الطلب"
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+      return;
+    }
     router.push(`/checkout/success?order=${orderNumber}`);
   }
 
@@ -224,11 +286,59 @@ export function CheckoutView({
             </li>
           ))}
         </ul>
+
+        {/* كود الخصم */}
+        <div className="space-y-2 border-t pt-3">
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between rounded-md bg-gold/10 px-3 py-2 text-sm">
+              <span>
+                تم تطبيق الكود{" "}
+                <strong className="font-semibold">{appliedCoupon.code}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleRemoveCoupon}
+                className="text-xs text-muted-foreground underline"
+              >
+                إزالة
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+                placeholder="كود الخصم"
+                className="h-9 flex-1 rounded-md border bg-background px-3 text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={couponChecking || !couponInput.trim()}
+                onClick={handleApplyCoupon}
+              >
+                {couponChecking ? "..." : "تطبيق"}
+              </Button>
+            </div>
+          )}
+          {couponError && (
+            <p className="text-xs text-destructive">{couponError}</p>
+          )}
+        </div>
+
         <dl className="space-y-2 border-t pt-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">المجموع الفرعي</dt>
             <dd>{formatPrice(subtotal, "TRY", "ar")}</dd>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-gold">
+              <dt>الخصم</dt>
+              <dd>-{formatPrice(discount, "TRY", "ar")}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-muted-foreground">الشحن</dt>
             <dd>

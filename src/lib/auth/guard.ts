@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import {
   roleHasPermission,
   isStaff,
@@ -52,6 +53,24 @@ export async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) {
     throw new AuthError("يجب تسجيل الدخول", 401);
+  }
+  return session.user;
+}
+
+/**
+ * نفس requireUser() لكن للاستخدام داخل صفحات (Server Components) بدل
+ * Server Actions/Route Handlers: تُحوِّل (redirect) لصفحة الدخول بدل رمي
+ * استثناء يُظهر صفحة خطأ عامة. مهم تحديداً بعد إضافة إبطال الجلسات
+ * (sessionsInvalidatedAt) - جلسة قديمة صالحة شكلياً (JWT لم تنتهِ بعد)
+ * لكن أُبطلت فعلياً (حظر/تغيير كلمة مرور) ستُعيد session.user كـundefined
+ * من auth()، وبدون هذه الدالة كانت الصفحات التي تفترض وجوده دائماً
+ * (session!.user.id) ستتعطل بخطأ تشغيل غير معالَج بدل تحويل نظيف لتسجيل
+ * الدخول.
+ */
+export async function requireUserOrRedirect() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
   }
   return session.user;
 }

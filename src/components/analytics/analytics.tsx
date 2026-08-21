@@ -8,7 +8,7 @@ import { hasAnalyticsConsent } from "./cookie-consent";
  * تحميل Google Analytics 4 فقط بعد موافقة المستخدم على الكوكيز.
  * يُضبط المعرّف عبر NEXT_PUBLIC_GA_MEASUREMENT_ID.
  */
-export function Analytics() {
+export function Analytics({ nonce }: { nonce?: string }) {
   const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const [consented, setConsented] = useState(false);
 
@@ -26,8 +26,9 @@ export function Analytics() {
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
         strategy="afterInteractive"
+        nonce={nonce}
       />
-      <Script id="ga-init" strategy="afterInteractive">
+      <Script id="ga-init" strategy="afterInteractive" nonce={nonce}>
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}

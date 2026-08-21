@@ -61,8 +61,17 @@ async function main() {
   // ---------- حساب المدير ----------
   console.log("→ إنشاء حساب المدير");
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@abo-alaa.com";
-  const adminPassword =
-    process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe_Strong#2026";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD is not set. Refusing to seed an admin account " +
+        "with a default/known password. Set SEED_ADMIN_PASSWORD to a strong, " +
+        "unique secret (e.g. via `openssl rand -base64 24`) before running the seed."
+    );
+  }
+  if (adminPassword.length < 12) {
+    throw new Error("SEED_ADMIN_PASSWORD must be at least 12 characters.");
+  }
   const adminHash = await hash(adminPassword, ARGON_OPTS);
 
   await prisma.user.upsert({

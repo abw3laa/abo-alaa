@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,14 +8,14 @@ import { Award } from "lucide-react";
 export const metadata: Metadata = { title: "نقاط الولاء" };
 
 export default async function LoyaltyPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const [user, ledger] = await Promise.all([
     prisma.user.findUnique({
-      where: { id: session!.user.id },
+      where: { id: user.id },
       select: { loyaltyPoints: true },
     }),
     prisma.loyaltyLedger.findMany({
-      where: { userId: session!.user.id },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),

@@ -7,6 +7,7 @@ import { requirePermission, AuthError } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
 import { uniqueSlug } from "@/lib/slug";
+import { sanitizeContentHtml } from "@/lib/security/sanitize-html";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -44,6 +45,9 @@ export async function saveBlogPost(
       };
     }
     const d = parsed.data;
+    // تنظيف HTML قبل التخزين - يمنع Stored XSS حتى لو تعرّض حساب موظف
+    // لديه صلاحية CONTENT_MANAGE للاختراق أو حقن Payload عبر المحرر
+    const cleanContent = sanitizeContentHtml(d.content);
 
     if (d.id) {
       await prisma.blogPost.update({
@@ -51,7 +55,7 @@ export async function saveBlogPost(
         data: {
           title: d.title,
           excerpt: d.excerpt,
-          content: d.content,
+          content: cleanContent,
           coverImage: d.coverImage || null,
           category: d.category || null,
           status: d.status,
@@ -63,7 +67,7 @@ export async function saveBlogPost(
           title: d.title,
           slug: uniqueSlug(d.title),
           excerpt: d.excerpt,
-          content: d.content,
+          content: cleanContent,
           coverImage: d.coverImage || null,
           category: d.category || null,
           status: d.status,
