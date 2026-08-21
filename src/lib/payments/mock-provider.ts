@@ -33,8 +33,14 @@ export class MockPaymentProvider implements PaymentProvider {
 
   async verifyWebhook(
     rawBody: string,
-    _signature: string | null
+    signature: string | null
   ): Promise<WebhookVerifyResult> {
+    // حتى في وضع Mock، إن كان MOCK_WEBHOOK_SECRET مضبوطاً (موصى به دوماً خارج
+    // التطوير المحلي) فيجب مطابقته - وإلا يستطيع أي طرف خارجي تزوير "دفعة ناجحة".
+    const expectedSecret = process.env.MOCK_WEBHOOK_SECRET;
+    if (expectedSecret && signature !== expectedSecret) {
+      return { valid: false };
+    }
     try {
       const data = JSON.parse(rawBody);
       return {

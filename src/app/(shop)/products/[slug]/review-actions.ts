@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser, AuthError } from "@/lib/auth/guard";
 
@@ -53,10 +54,10 @@ export async function submitReview(
     });
     if (!product) return { ok: false, error: "المنتج غير موجود" };
 
-    // منع أكثر من مراجعة واحدة لكل مستخدم لكل منتج
-    const existing = await prisma.review.findFirst({
-      where: { productId: d.productId, userId: user.id },
-    });
+    // منع أكثر من مراجعة واحدة لكل مستخدم لكل منتج: نعتمد على القيد
+    // @@unique([userId, productId]) في قاعدة البيانات (وليس على findFirst
+    // ثم create بشكل منفصل، لأن ذلك يفتح نافذة سباق بين طلبين متزامنين
+    // لنفس المستخدم/المنتج). upsert ذرّي بالكامل عبر قاعدة البيانات.
 
     // هل اشترى المستخدم هذا المنتج؟ (مراجعة موثّقة)
     const purchased = await prisma.orderItem.findFirst({
@@ -67,19 +68,16 @@ export async function submitReview(
       select: { id: true },
     });
 
-    if (existing) {
-      await prisma.review.update({
-        where: { id: existing.id },
-        data: {
+    try {
+      await prisma.review.upsert({
+        where: { userId_productId: { userId: user.id, productId: d.productId } },
+        update: {
           rating: d.rating,
           title: d.title,
           comment: d.comment,
           isVerifiedPurchase: !!purchased,
         },
-      });
-    } else {
-      await prisma.review.create({
-        data: {
+        create: {
           productId: d.productId,
           userId: user.id,
           rating: d.rating,
@@ -89,6 +87,16 @@ export async function submitReview(
           isVerifiedPurchase: !!purchased,
         },
       });
+    } catch (err) {
+      // P2002: تصادم نادر جداً (سباق بين طلبين متزامنين تماماً) - نتعامل
+      // معه بدل تركه يظهر كخطأ خادم عام غير مفهوم للمستخدم
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        return { ok: false, error: "لديك مراجعة لهذا المنتج بالفعل" };
+      }
+      throw err;
     }
 
     await recalcRating(d.productId);

@@ -82,7 +82,7 @@ export function CouponManager() {
       </div>
       <div className="space-y-1.5">
         <label htmlFor="maxUses" className="text-xs font-medium">
-          حد الاستخدام
+          حد الاستخدام الكلي
         </label>
         <input
           id="maxUses"
@@ -91,7 +91,46 @@ export function CouponManager() {
           className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
         />
       </div>
+      <div className="space-y-1.5">
+        <label htmlFor="maxUsesPerUser" className="text-xs font-medium">
+          حد لكل مستخدم
+        </label>
+        <input
+          id="maxUsesPerUser"
+          name="maxUsesPerUser"
+          type="number"
+          min={1}
+          placeholder="بلا حد"
+          className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <label htmlFor="startsAt" className="text-xs font-medium">
+          يبدأ في
+        </label>
+        <input
+          id="startsAt"
+          name="startsAt"
+          type="datetime-local"
+          className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <label htmlFor="expiresAt" className="text-xs font-medium">
+          ينتهي في
+        </label>
+        <input
+          id="expiresAt"
+          name="expiresAt"
+          type="datetime-local"
+          className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+        />
+      </div>
       <div className="flex items-end gap-2">
+        <label className="flex items-center gap-1 pb-2 text-xs">
+          <input type="checkbox" name="firstOrderOnly" />
+          أول طلب فقط
+        </label>
         <label className="flex items-center gap-1 pb-2 text-xs">
           <input type="checkbox" name="isActive" defaultChecked />
           فعّال

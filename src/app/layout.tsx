@@ -2,11 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { headers } from "next/headers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { CookieConsent } from "@/components/analytics/cookie-consent";
 import { Analytics } from "@/components/analytics/analytics";
 import "./globals.css";
+import { safeJsonLd } from "@/lib/security/json-ld";
 
 const arabicFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
@@ -76,6 +78,9 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
   const dir = locale === "ar" ? "rtl" : "ltr";
+  // Nonce المُولَّد لكل طلب في middleware.ts - مطلوب لتشغيل أي <script>
+  // Inline الآن بعد إزالة 'unsafe-inline' من CSP
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -89,7 +94,8 @@ export default async function RootLayout({
       <body className={`${arabicFont.variable} font-sans antialiased`}>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }}
         />
         <ThemeProvider
           attribute="class"
@@ -102,7 +108,7 @@ export default async function RootLayout({
           </NextIntlClientProvider>
           <CookieConsent />
         </ThemeProvider>
-        <Analytics />
+        <Analytics nonce={nonce} />
         <SpeedInsights />
       </body>
     </html>

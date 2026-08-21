@@ -13,6 +13,14 @@ const TYPE_LABELS: Record<string, string> = {
   FREE_SHIPPING: "شحن مجاني",
 };
 
+/** يحوّل ISO string إلى صيغة datetime-local (YYYY-MM-DDTHH:mm) */
+function toDateTimeLocal(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export interface CouponRowData {
   id: string;
   code: string;
@@ -20,7 +28,10 @@ export interface CouponRowData {
   value: number;
   minOrderAmount: number | null;
   maxUses: number | null;
+  maxUsesPerUser: number | null;
+  firstOrderOnly: boolean;
   usedCount: number;
+  startsAt: string | null;
   expiresAt: string | null;
   isActive: boolean;
 }
@@ -89,11 +100,39 @@ export function CouponRow({ coupon }: { coupon: CouponRowData }) {
             <input
               name="maxUses"
               type="number"
-              placeholder="حد الاستخدام"
+              placeholder="حد الاستخدام الكلي"
               defaultValue={coupon.maxUses ?? ""}
               className="h-10 rounded-md border border-input bg-background px-2 text-sm"
             />
+            <input
+              name="maxUsesPerUser"
+              type="number"
+              min={1}
+              placeholder="حد لكل مستخدم"
+              defaultValue={coupon.maxUsesPerUser ?? ""}
+              className="h-10 rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <input
+              name="startsAt"
+              type="datetime-local"
+              defaultValue={toDateTimeLocal(coupon.startsAt)}
+              className="h-10 rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <input
+              name="expiresAt"
+              type="datetime-local"
+              defaultValue={toDateTimeLocal(coupon.expiresAt)}
+              className="h-10 rounded-md border border-input bg-background px-2 text-sm"
+            />
             <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  name="firstOrderOnly"
+                  defaultChecked={coupon.firstOrderOnly}
+                />
+                أول طلب فقط
+              </label>
               <label className="flex items-center gap-1 text-xs">
                 <input
                   type="checkbox"

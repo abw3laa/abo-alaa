@@ -15,6 +15,10 @@ const couponSchema = z.object({
   value: z.coerce.number().min(0),
   minOrderAmount: z.coerce.number().optional(),
   maxUses: z.coerce.number().int().optional(),
+  maxUsesPerUser: z.coerce.number().int().positive().optional(),
+  firstOrderOnly: z.coerce.boolean().optional(),
+  startsAt: z.string().optional(),
+  expiresAt: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
 });
 
@@ -30,6 +34,10 @@ export async function createCoupon(
       value: formData.get("value"),
       minOrderAmount: formData.get("minOrderAmount") || undefined,
       maxUses: formData.get("maxUses") || undefined,
+      maxUsesPerUser: formData.get("maxUsesPerUser") || undefined,
+      firstOrderOnly: formData.get("firstOrderOnly") === "on",
+      startsAt: formData.get("startsAt") || undefined,
+      expiresAt: formData.get("expiresAt") || undefined,
       isActive: formData.get("isActive") === "on",
     });
     if (!parsed.success) {
@@ -39,6 +47,14 @@ export async function createCoupon(
       };
     }
     const d = parsed.data;
+    const startsAt = d.startsAt ? new Date(d.startsAt) : null;
+    const expiresAt = d.expiresAt ? new Date(d.expiresAt) : null;
+    if (startsAt && expiresAt && expiresAt <= startsAt) {
+      return {
+        ok: false,
+        error: "تاريخ الانتهاء يجب أن يكون بعد تاريخ البدء",
+      };
+    }
 
     const existing = await prisma.coupon.findUnique({
       where: { code: d.code },
@@ -54,6 +70,10 @@ export async function createCoupon(
         value: d.value,
         minOrderAmount: d.minOrderAmount ?? null,
         maxUses: d.maxUses ?? null,
+        maxUsesPerUser: d.maxUsesPerUser ?? null,
+        firstOrderOnly: d.firstOrderOnly ?? false,
+        startsAt,
+        expiresAt,
         isActive: d.isActive ?? true,
       },
     });

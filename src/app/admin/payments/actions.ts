@@ -47,6 +47,22 @@ export async function savePaymentMethod(
     }
     const d = parsed.data;
 
+    // منع تفعيل طريقة دفع provider="stripe" إن لم تكن مفاتيح Stripe
+    // مضبوطة فعلياً في متغيّرات البيئة - وإلا سيختار عميل هذه الطريقة
+    // ويصل لصفحة الدفع فقط ليكتشف فشلها (order.route.ts يلتقط الخطأ
+    // بأمان لكن هذا لا يزال تجربة سيئة يمكن منعها من مصدرها هنا)
+    if (
+      d.provider === "stripe" &&
+      (d.isActive ?? true) &&
+      (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET)
+    ) {
+      return {
+        ok: false,
+        error:
+          "لا يمكن تفعيل طريقة دفع Stripe قبل ضبط STRIPE_SECRET_KEY وSTRIPE_WEBHOOK_SECRET في متغيّرات البيئة",
+      };
+    }
+
     // منع تكرار الرمز
     const clash = await prisma.paymentMethodOption.findFirst({
       where: { code: d.code, id: d.id ? { not: d.id } : undefined },

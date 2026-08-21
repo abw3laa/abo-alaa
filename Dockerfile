@@ -15,6 +15,15 @@ RUN npx prisma generate
 RUN npm run build
 
 # ==========================================
+# مرحلة اعتماديات الإنتاج فقط (بدون devDependencies) - تقليل حجم الصورة
+# النهائية وسطح الهجوم (لا حاجة لأدوات بناء/اختبار في صورة التشغيل)
+# ==========================================
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
+# ==========================================
 # مرحلة التشغيل
 # ==========================================
 FROM node:20-alpine AS runner
@@ -24,11 +33,15 @@ ENV NODE_ENV=production
 # مستخدم غير جذري لأغراض الأمان
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# نسخ Prisma Client المُولَّد فعلياً في مرحلة البناء (فوق node_modules
+# الخاصة بالإنتاج) بدل إعادة توليده هنا - حزمة "prisma" (الأداة/CLI) هي
+# devDependency وغير متاحة في مرحلة prod-deps عمداً لتقليل حجم الصورة.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
 EXPOSE 3000

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
+import { sanitizeContentHtml } from "@/lib/security/sanitize-html";
 
 export async function generateMetadata({
   params,
@@ -49,7 +50,9 @@ export default async function BlogPostPage({
       )}
       <div
         className="prose mt-6 max-w-none text-foreground"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        // تنظيف مستقل هنا أيضاً (وليس فقط عند الحفظ) كطبقة دفاع ثانية،
+        // احتياطاً لأي بيانات قديمة أو مسار كتابة مستقبلي غير مُنظَّف
+        dangerouslySetInnerHTML={{ __html: sanitizeContentHtml(post.content) }}
       />
     </article>
   );

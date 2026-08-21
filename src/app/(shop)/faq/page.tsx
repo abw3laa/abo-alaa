@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { safeJsonLd } from "@/lib/security/json-ld";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = { title: "الأسئلة الشائعة" };
 
@@ -21,11 +23,14 @@ export default async function FaqPage() {
     })),
   };
 
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <div className="container max-w-3xl py-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <h1 className="mb-6 text-2xl font-bold">الأسئلة الشائعة</h1>
       {faqs.length === 0 ? (

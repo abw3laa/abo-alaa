@@ -52,6 +52,10 @@ model User {
   loyaltyPoints Int       @default(0)
   lastActiveAt  DateTime?
   totalSpent    Decimal   @default(0) @db.Decimal(12, 2)
+  // يُحدَّث عند تغيير كلمة المرور (أو حظر/تغيير دور حساس). أي JWT صدر قبل
+  // هذا التاريخ يُعتبر باطلاً في callback الجلسة رغم أن توقيعه لا يزال
+  // صالحاً تقنياً (استراتيجية JWT بلا جلسات خادم قابلة للإبطال مباشرة).
+  sessionsInvalidatedAt DateTime?
 
   accounts      Account[]
   sessions      Session[]
@@ -67,6 +71,7 @@ model User {
   blogPosts     BlogPost[]
   returns       Return[]
   loyaltyLedger LoyaltyLedger[]
+  couponUsages  CouponUsage[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -360,6 +365,7 @@ model Review {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@unique([userId, productId])
   @@index([productId])
   @@index([userId])
 }
@@ -477,6 +483,9 @@ enum PaymentStatus {
 model Order {
   id             String      @id @default(uuid())
   orderNumber    String      @unique
+  // مفتاح Idempotency اختياري من العميل (Header: Idempotency-Key) لمنع
+  // إنشاء طلبات مكررة عند إعادة الإرسال (ضغط مزدوج، إعادة محاولة الشبكة...)
+  idempotencyKey String?     @unique
   userId         String?
   user           User?       @relation(fields: [userId], references: [id])
 
@@ -497,10 +506,23 @@ model Order {
 
   couponCode     String?
 
+  // مرجع اختياري لعنوان محفوظ لدى المستخدم (قد يُعدَّل أو يُحذف لاحقاً)
   shippingAddressId String?
   shippingAddress   Address? @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
   billingAddressId  String?
   billingAddress    Address? @relation("BillingAddress", fields: [billingAddressId], references: [id])
+
+  // لقطة ثابتة (Snapshot) من عنوان الشحن وقت الشراء الفعلي - لا تتأثر إن
+  // عدّل العميل أو حذف عنوانه المحفوظ لاحقاً. هذه هي مصدر الحقيقة لعرض/شحن الطلب.
+  shippingFullName   String?
+  shippingPhone      String?
+  shippingCountry    String?
+  shippingCity       String?
+  shippingState      String?
+  shippingStreet     String?
+  shippingBuilding   String?
+  shippingPostalCode String?
+  shippingNotes      String?
 
   shippingMethod String?
   internalNotes  String?     @db.Text
@@ -509,6 +531,7 @@ model Order {
   payments       Payment[]
   shipments      Shipment[]
   returns        Return[]
+  couponUsage    CouponUsage?
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -706,10 +729,31 @@ model Coupon {
   brandIds       String[]
   allowStacking  Boolean    @default(false)
 
+  usages         CouponUsage[]
+
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
   @@index([code])
+}
+
+// سجل استهلاك الكوبون - سجل واحد لكل طلب فعلياً استخدم كوبوناً. يُستخدم
+// لتطبيق maxUsesPerUser بشكل موثوق (بما في ذلك طلبات الضيوف عبر
+// guestEmail، وليس فقط المستخدمين المسجَّلين)، ولإتاحة تدقيق/تقرير
+// استخدام كل كوبون لاحقاً.
+model CouponUsage {
+  id         String   @id @default(uuid())
+  couponId   String
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail String?
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([couponId, userId])
+  @@index([couponId, guestEmail])
 }
 
 model Promotion {

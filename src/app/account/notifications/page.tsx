@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/format";
@@ -8,9 +8,9 @@ import { Bell } from "lucide-react";
 export const metadata: Metadata = { title: "الإشعارات" };
 
 export default async function NotificationsPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const notifications = await prisma.notification.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 50,
   });

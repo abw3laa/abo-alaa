@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/product/product-card";
 import { WishlistRemoveButton } from "@/components/product/wishlist-remove-button";
@@ -13,9 +13,9 @@ export const metadata: Metadata = { title: "المفضلة" };
 export const dynamic = "force-dynamic";
 
 export default async function WishlistPage() {
-  const session = await auth();
+  const user = await requireUserOrRedirect();
   const items = await prisma.wishlistItem.findMany({
-    where: { userId: session!.user.id },
+    where: { userId: user.id },
     include: {
       product: {
         include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },

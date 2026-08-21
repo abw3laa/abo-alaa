@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { auth } from "@/lib/auth";
+import { requireUserOrRedirect } from "@/lib/auth/guard";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { ProfileForm } from "@/components/account/profile-form";
@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "حسابي" };
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  const session = await auth();
-  const userId = session!.user.id;
+  const user = await requireUserOrRedirect();
+  const userId = user.id;
 
   const [orderCount, wishlistCount, user] = await Promise.all([
     prisma.order.count({ where: { userId } }),
